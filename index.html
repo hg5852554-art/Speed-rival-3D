@@ -1,0 +1,137 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Turbo Race 3D</title>
+<style>
+body{margin:0;background:#101526;color:white;font-family:Arial;text-align:center}
+canvas{display:block}
+#menu{padding:22px}
+h1{color:#48eaff}
+button{padding:14px;margin:6px;border:0;border-radius:12px;
+background:#664cff;color:white;font-size:16px;font-weight:bold}
+#game{display:none}
+#controls{position:fixed;bottom:20px;width:100%;display:flex;
+justify-content:space-around;pointer-events:none}
+#controls button{pointer-events:auto;background:#222b55;font-size:25px}
+#status{position:fixed;top:10px;left:10px;z-index:2}
+</style>
+</head>
+<body>
+<div id="menu">
+<h1>🏎️ TURBO RACE 3D</h1>
+<p>Choose your race mode</p>
+<button onclick="startSolo()">🏁 Solo Race</button>
+<button onclick="multi()">🌐 Race with Other Players</button>
+<p id="message">3D racing starts here!</p>
+</div>
+<div id="game">
+<div id="status">Distance: <span id="score">0</span></div>
+<div id="controls">
+<button onclick="move(-1)">⬅️</button>
+<button onclick="move(1)">➡️</button>
+</div>
+</div>
+<script type="module">
+import * as THREE from
+'https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js';
+
+let scene,camera,renderer,car,playing=false;
+let roadLines=[],distance=0,lane=0;
+
+window.multi=()=>{
+ document.getElementById('message').textContent=
+ 'Online rooms need Firebase setup. Next we will add Create Room, Join Room and random matchmaking!';
+};
+
+window.startSolo=()=>{
+ document.getElementById('menu').style.display='none';
+ document.getElementById('game').style.display='block';
+ init();
+};
+
+window.move=(n)=>{lane=Math.max(-1,Math.min(1,lane+n));};
+
+function init(){
+ scene=new THREE.Scene();
+ scene.background=new THREE.Color(0x83cfff);
+ scene.fog=new THREE.Fog(0x83cfff,25,100);
+
+ camera=new THREE.PerspectiveCamera(65,innerWidth/innerHeight,.1,200);
+ camera.position.set(0,5,9);
+ camera.lookAt(0,0,0);
+
+ renderer=new THREE.WebGLRenderer({antialias:true});
+ renderer.setSize(innerWidth,innerHeight);
+ renderer.setPixelRatio(Math.min(devicePixelRatio,1.5));
+ document.body.appendChild(renderer.domElement);
+
+ scene.add(new THREE.HemisphereLight(0xffffff,0x555566,2));
+ const light=new THREE.DirectionalLight(0xffffff,2);
+ light.position.set(2,10,5);scene.add(light);
+
+ const ground=new THREE.Mesh(
+ new THREE.PlaneGeometry(100,200),
+ new THREE.MeshStandardMaterial({color:0x248044}));
+ ground.rotation.x=-Math.PI/2;ground.position.z=-40;scene.add(ground);
+
+ const road=new THREE.Mesh(
+ new THREE.PlaneGeometry(8,200),
+ new THREE.MeshStandardMaterial({color:0x343943}));
+ road.rotation.x=-Math.PI/2;road.position.set(0,.02,-40);
+ scene.add(road);
+
+ for(let z=-100;z<10;z+=8){
+  const line=new THREE.Mesh(
+  new THREE.BoxGeometry(.12,.035,3),
+  new THREE.MeshStandardMaterial({color:0xffffff}));
+  line.position.set(0,.05,z);scene.add(line);roadLines.push(line);
+ }
+
+ car=new THREE.Group();
+ const body=new THREE.Mesh(
+ new THREE.BoxGeometry(1.35,.55,2.2),
+ new THREE.MeshStandardMaterial({color:0xff303f,metalness:.3,roughness:.3}));
+ body.position.y=.65;car.add(body);
+
+ const top=new THREE.Mesh(
+ new THREE.BoxGeometry(.95,.5,1),
+ new THREE.MeshStandardMaterial({color:0x18243a}));
+ top.position.set(0,1.12,-.1);car.add(top);
+
+ for(const x of [-.72,.72])for(const z of [-.65,.65]){
+  const wheel=new THREE.Mesh(
+  new THREE.BoxGeometry(.25,.48,.45),
+  new THREE.MeshStandardMaterial({color:0x111111}));
+  wheel.position.set(x,.42,z);car.add(wheel);
+ }
+ car.position.z=3;scene.add(car);
+ distance=0;playing=true;animate();
+}
+
+function animate(){
+ if(!playing)return;
+ requestAnimationFrame(animate);
+ distance+=.15;
+ document.getElementById('score').textContent=Math.floor(distance);
+ car.position.x+=(lane*2-car.position.x)*.12;
+ roadLines.forEach(line=>{
+  line.position.z+=.6;
+  if(line.position.z>8)line.position.z=-100;
+ });
+ camera.position.x+=(car.position.x*.35-camera.position.x)*.06;
+ camera.lookAt(car.position.x*.25,.4,-4);
+ renderer.render(scene,camera);
+}
+
+addEventListener('resize',()=>{
+ if(!renderer)return;
+ camera.aspect=innerWidth/innerHeight;
+ camera.updateProjectionMatrix();
+ renderer.setSize(innerWidth,innerHeight);
+});
+</script>
+</body>
+</html>
